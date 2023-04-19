@@ -36,7 +36,7 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
             axis-aligned boxes tightly enclosing the original boxes.
     """
     YAW_AXIS = 1
-
+    # CameraInstance3DBoxes 重写了初始化，主要是由于默认 origin 不同的原因 
     def __init__(self,
                  tensor,
                  box_dim=7,
@@ -280,6 +280,7 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
         overlaps_h = torch.clamp(heighest_of_bottom - lowest_of_top, min=0)
         return overlaps_h
 
+    # 将camera boxes转换到其他坐标系的boxes
     def convert_to(self, dst, rt_mat=None):
         """Convert self to ``dst`` mode.
 
@@ -298,7 +299,7 @@ class CameraInstance3DBoxes(BaseInstance3DBoxes):
         """
         from .box_3d_mode import Box3DMode
         return Box3DMode.convert(
-            box=self, src=Box3DMode.CAM, dst=dst, rt_mat=rt_mat)
+            box=self, src=Box3DMode.CAM, dst=dst, rt_mat=rt_mat)   # rt_mat 平移旋转变换矩阵
 
     def points_in_boxes_part(self, points, boxes_override=None):
         """Find the box in which each point is.

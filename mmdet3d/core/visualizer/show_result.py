@@ -17,6 +17,7 @@ def _write_obj(points, out_filename):
         out_filename (str): Filename to be saved.
     """
     N = points.shape[0]
+    # 保存点云结果
     fout = open(out_filename, 'w')
     for i in range(N):
         if points.shape[1] == 6:
@@ -50,6 +51,7 @@ def _write_oriented_bbox(scene_bbox, out_filename):
         rotmat[0:2, 0:2] = np.array([[cosval, -sinval], [sinval, cosval]])
         return rotmat
 
+    #  将MMDetection3D 内部格式的 3D 框转换为 trimesh 格式 
     def convert_oriented_box_to_trimesh_fmt(box):
         ctr = box[:3]
         lengths = box[3:6]
@@ -62,17 +64,19 @@ def _write_oriented_bbox(scene_bbox, out_filename):
 
     if len(scene_bbox) == 0:
         scene_bbox = np.zeros((1, 7))
+    # 利用 trimesh 构建场景
     scene = trimesh.scene.Scene()
     for box in scene_bbox:
         scene.add_geometry(convert_oriented_box_to_trimesh_fmt(box))
 
     mesh_list = trimesh.util.concatenate(scene.dump())
-    # save to obj file
+    # save to obj file 保存为 obj 文件
     trimesh.io.export.export_mesh(mesh_list, out_filename, file_type='obj')
 
     return
 
 
+# 点云场景 3D 框可视化 
 def show_result(points,
                 gt_bboxes,
                 pred_bboxes,
@@ -144,6 +148,7 @@ def show_result(points,
                              osp.join(result_path, f'{filename}_pred.obj'))
 
 
+# 点云场景分割可视化
 def show_seg_result(points,
                     gt_seg,
                     pred_seg,
@@ -217,6 +222,7 @@ def show_seg_result(points,
                                             f'{filename}_pred.obj'))
 
 
+# 图片 3D 框投影可视化
 def show_multi_modality_result(img,
                                gt_bboxes,
                                pred_bboxes,

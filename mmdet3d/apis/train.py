@@ -204,6 +204,7 @@ def train_detector(model,
 
     runner_type = 'EpochBasedRunner' if 'runner' not in cfg else cfg.runner[
         'type']
+    # 初始化data_loaders, 内部会初始化GroupSampler
     data_loaders = [
         build_mmdet_dataloader(
             ds,
@@ -218,6 +219,7 @@ def train_detector(model,
         for ds in dataset
     ]
 
+    # 根据是否使用分布式训练，初始化对应DataParallel
     # put model on gpus
     if distributed:
         find_unused_parameters = cfg.get('find_unused_parameters', False)
@@ -246,7 +248,7 @@ def train_detector(model,
     else:
         if 'total_epochs' in cfg:
             assert cfg.total_epochs == cfg.runner.max_epochs
-
+    # 初始化runner，runner中包含了optimizer等
     runner = build_runner(
         cfg.runner,
         default_args=dict(
@@ -269,7 +271,7 @@ def train_detector(model,
     else:
         optimizer_config = cfg.optimizer_config
 
-    # register hooks
+    # register hooks 注册必备hook
     runner.register_training_hooks(
         cfg.lr_config,
         optimizer_config,
@@ -305,6 +307,9 @@ def train_detector(model,
         runner.register_hook(
             eval_hook(val_dataloader, **eval_cfg), priority='LOW')
 
+    # 可以在此注册用户自定义hook  runner.register_hook(hook, priority=priority)
+    
+    # 权重恢复与加载
     resume_from = None
     if cfg.resume_from is None and cfg.get('auto_resume'):
         resume_from = find_latest_checkpoint(cfg.work_dir)
@@ -313,9 +318,10 @@ def train_detector(model,
         cfg.resume_from = resume_from
 
     if cfg.resume_from:
-        runner.resume(cfg.resume_from)
+        runner.resume(cfg.resume_from)  # 权重恢复
     elif cfg.load_from:
-        runner.load_checkpoint(cfg.load_from)
+        runner.load_checkpoint(cfg.load_from)  #权重加载
+    # 运行，开始训练
     runner.run(data_loaders, cfg.workflow)
 
 

@@ -88,19 +88,26 @@ class VoxelNet(SingleStage3DDetector):
         Returns:
             dict: Losses of each branch.
         """
+        # 先进行点云特征提取
         x = self.extract_feat(points, img_metas)
+        # 调用bbox_head 内部的forward_train 方法，得到head输出
         outs = self.bbox_head(x)
         loss_inputs = outs + (gt_bboxes_3d, gt_labels_3d, img_metas)
+        # 将head部分的输出和数据label送入计算loss
         losses = self.bbox_head.loss(
             *loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         return losses
 
     def simple_test(self, points, img_metas, imgs=None, rescale=False):
         """Test function without augmentaiton."""
+        # 点云特征提取
         x = self.extract_feat(points, img_metas)
+        # 调用内部bbox_head内部的forward_train方法，得到head输出
         outs = self.bbox_head(x)
+        # 根据head输出结果生成bboxes
         bbox_list = self.bbox_head.get_bboxes(
             *outs, img_metas, rescale=rescale)
+        # 对检测结果进行调整
         bbox_results = [
             bbox3d2result(bboxes, scores, labels)
             for bboxes, scores, labels in bbox_list
@@ -124,6 +131,7 @@ class VoxelNet(SingleStage3DDetector):
             aug_bboxes.append(bbox_list[0])
 
         # after merging, bboxes will be rescaled to the original image size
+        # 将增强后的 bboxes 进行 merge 合并操作 
         merged_bboxes = merge_aug_bboxes_3d(aug_bboxes, img_metas,
                                             self.bbox_head.test_cfg)
 

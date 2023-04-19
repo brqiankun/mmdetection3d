@@ -1,7 +1,7 @@
 voxel_size = [0.16, 0.16, 4]
 
 model = dict(
-    type='VoxelNet',
+    type='VoxelNet',   # 检测器类型 见mmdet3d.models.detectors
     voxel_layer=dict(
         max_num_points=32,  # max_points_per_voxel
         point_cloud_range=[0, -39.68, -3, 69.12, 39.68, 1],
@@ -18,7 +18,7 @@ model = dict(
     middle_encoder=dict(
         type='PointPillarsScatter', in_channels=64, output_shape=[496, 432]),
     backbone=dict(
-        type='SECOND',
+        type='SECOND',  # 主干网络类型 见mmdet3d.models.backbones
         in_channels=64,
         layer_nums=[3, 5, 5],
         layer_strides=[2, 2, 2],
@@ -29,8 +29,8 @@ model = dict(
         upsample_strides=[1, 2, 4],
         out_channels=[128, 128, 128]),
     bbox_head=dict(
-        type='Anchor3DHead',
-        num_classes=3,
+        type='Anchor3DHead',    # 检测头类型
+        num_classes=3,          # 分类类边框数量
         in_channels=384,
         feat_channels=384,
         use_direction_classifier=True,
@@ -46,7 +46,7 @@ model = dict(
             rotations=[0, 1.57],
             reshape_out=False),
         diff_rad_by_sin=True,
-        bbox_coder=dict(type='DeltaXYZWLHRBBoxCoder'),
+        bbox_coder=dict(type='DeltaXYZWLHRBBoxCoder'),    # 框编码层的类型
         loss_cls=dict(
             type='FocalLoss',
             use_sigmoid=True,

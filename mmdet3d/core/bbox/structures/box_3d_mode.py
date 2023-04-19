@@ -10,6 +10,7 @@ from .depth_box3d import DepthInstance3DBoxes
 from .lidar_box3d import LiDARInstance3DBoxes
 from .utils import limit_period
 
+# 不同坐标系 Box 的转换
 
 @unique
 class Box3DMode(IntEnum):
@@ -103,7 +104,7 @@ class Box3DMode(IntEnum):
             if is_numpy:
                 arr = torch.from_numpy(np.asarray(box)).clone()
             elif is_Instance3DBoxes:
-                arr = box.tensor.clone()
+                arr = box.tensor.clone()    # 如果是boxes类，需要使用tensor方法取出值
             else:
                 arr = box.clone()
 
@@ -114,6 +115,8 @@ class Box3DMode(IntEnum):
         x_size, y_size, z_size = arr[..., 3:4], arr[..., 4:5], arr[..., 5:6]
         if with_yaw:
             yaw = arr[..., 6:7]
+        
+        # 从lidar 到 camera坐标系
         if src == Box3DMode.LIDAR and dst == Box3DMode.CAM:
             if rt_mat is None:
                 rt_mat = arr.new_tensor([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
@@ -121,6 +124,8 @@ class Box3DMode(IntEnum):
             if with_yaw:
                 yaw = -yaw - np.pi / 2
                 yaw = limit_period(yaw, period=np.pi * 2)
+
+        # 从camera 到 lidar坐标系
         elif src == Box3DMode.CAM and dst == Box3DMode.LIDAR:
             if rt_mat is None:
                 rt_mat = arr.new_tensor([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])
@@ -164,6 +169,7 @@ class Box3DMode(IntEnum):
         if rt_mat.size(1) == 4:
             extended_xyz = torch.cat(
                 [arr[..., :3], arr.new_ones(arr.size(0), 1)], dim=-1)
+            # 利用选择矩阵变换位置
             xyz = extended_xyz @ rt_mat.t()
         else:
             xyz = arr[..., :3] @ rt_mat.t()
@@ -192,6 +198,7 @@ class Box3DMode(IntEnum):
                 raise NotImplementedError(
                     f'Conversion to {dst} through {original_type}'
                     ' is not supported yet')
+            # 封装进Boxes类
             return target_type(arr, box_dim=arr.size(-1), with_yaw=with_yaw)
         else:
             return arr

@@ -29,7 +29,7 @@ model = dict(
 
 # dataset settings
 dataset_type = 'KittiDataset'
-data_root = 'data/kitti/'
+data_root = 'data/kitti/'   # 数据集路径
 class_names = ['Car']
 db_sampler = dict(
     data_root=data_root,
@@ -39,6 +39,7 @@ db_sampler = dict(
     sample_groups=dict(Car=15),
     classes=class_names)
 
+# 训练流水线  训练流水线，更多细节请参考 mmdet3d.datasets.pipelines
 train_pipeline = [
     dict(type='LoadPointsFromFile', coord_type='LIDAR', load_dim=4, use_dim=4),
     dict(type='LoadAnnotations3D', with_bbox_3d=True, with_label_3d=True),
@@ -80,8 +81,8 @@ test_pipeline = [
 
 data = dict(
     train=dict(
-        type='RepeatDataset',
-        times=2,
+        type='RepeatDataset',  # 数据集嵌套 更多细节请参考/mmdet/datasets/dataset_wrappers.py
+        times=2,               # 重复次数
         dataset=dict(pipeline=train_pipeline, classes=class_names)),
-    val=dict(pipeline=test_pipeline, classes=class_names),
-    test=dict(pipeline=test_pipeline, classes=class_names))
+    val=dict(pipeline=test_pipeline, classes=class_names),  # 验证数据集配置
+    test=dict(pipeline=test_pipeline, classes=class_names)) # 测试数据集配置

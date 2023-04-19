@@ -158,6 +158,8 @@ class KittiDataset(Custom3DDataset):
                 - difficulty (int): Difficulty defined by KITTI.
                     0, 1, 2 represent xxxxx respectively.
         """
+        # 从 pkl 标注文件中载入 3D Box ground truth 
+        # 在 KITTI 数据集中，pkl 标注文件中的框是在相机坐标系下标注的，但是在真正的训练过程中，需要将框转换到激光雷达坐标系
         # Use index to get the annos, thus the evalhook could also use this api
         info = self.data_infos[index]
         rect = info['calib']['R0_rect'].astype(np.float32)
@@ -193,6 +195,7 @@ class KittiDataset(Custom3DDataset):
                                       axis=1).astype(np.float32)
 
         # convert gt_bboxes_3d to velodyne coordinates
+        # np.linalg.inv(rect @ Trv2c) 通过 KITTI 数据计算得到的旋转平移变换矩阵 
         gt_bboxes_3d = CameraInstance3DBoxes(gt_bboxes_3d).convert_to(
             self.box_mode_3d, np.linalg.inv(rect @ Trv2c))
         gt_bboxes = annos['bbox']
@@ -719,6 +722,7 @@ class KittiDataset(Custom3DDataset):
             pipeline.insert(0, dict(type='LoadImageFromFile'))
         return Compose(pipeline)
 
+    # 完成对kitti数据集的推理后可以进行的可视化
     def show(self, results, out_dir, show=True, pipeline=None):
         """Results visualization.
 
@@ -747,9 +751,11 @@ class KittiDataset(Custom3DDataset):
             gt_bboxes = self.get_ann_info(i)['gt_bboxes_3d'].tensor.numpy()
             show_gt_bboxes = Box3DMode.convert(gt_bboxes, Box3DMode.LIDAR,
                                                Box3DMode.DEPTH)
+            # 预测结果可视化时将检测结果转换到深度坐标系
             pred_bboxes = result['boxes_3d'].tensor.numpy()
             show_pred_bboxes = Box3DMode.convert(pred_bboxes, Box3DMode.LIDAR,
                                                  Box3DMode.DEPTH)
+            # 调用open3d 或 meshlab 进行可视化
             show_result(points, show_gt_bboxes, show_pred_bboxes, out_dir,
                         file_name, show)
 

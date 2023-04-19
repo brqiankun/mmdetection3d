@@ -3,7 +3,7 @@
 # The learning rate set in the cyclic schedule is the initial learning rate
 # rather than the max learning rate. Since the target_ratio is (10, 1e-4),
 # the learning rate will change from 0.0018 to 0.018, than go to 0.0018*1e-4
-lr = 0.0018
+lr = 0.0018  # 学习率
 # The optimizer follows the setting in SECOND.Pytorch, but here we use
 # the official AdamW optimizer implemented by PyTorch.
 optimizer = dict(type='AdamW', lr=lr, betas=(0.95, 0.99), weight_decay=0.01)
@@ -14,7 +14,7 @@ optimizer_config = dict(grad_clip=dict(max_norm=10, norm_type=2))
 # https://github.com/open-mmlab/mmcv/blob/f48241a65aebfe07db122e9db320c31b685dc674/mmcv/runner/hooks/lr_updater.py#L327  # noqa
 # https://github.com/open-mmlab/mmcv/blob/f48241a65aebfe07db122e9db320c31b685dc674/mmcv/runner/hooks/momentum_updater.py#L130  # noqa
 lr_config = dict(
-    policy='cyclic',
+    policy='cyclic',  # 学习率调整策略
     target_ratio=(10, 1e-4),
     cyclic_times=1,
     step_ratio_up=0.4,

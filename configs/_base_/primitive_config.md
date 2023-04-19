@@ -1,0 +1,1 @@
+primitive 原始配置

@@ -116,6 +116,7 @@ def parse_args():
 def main():
     args = parse_args()
 
+    # config init
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
@@ -187,13 +188,14 @@ def main():
         logger_name = 'mmseg'
     else:
         logger_name = 'mmdet'
+    # logger init
     logger = get_root_logger(
         log_file=log_file, log_level=cfg.log_level, name=logger_name)
 
     # init the meta dict to record some important information such as
     # environment info and seed, which will be logged
     meta = dict()
-    # log env info
+    # log env info 收集运行环境并打印，排查软硬件问题
     env_info_dict = collect_env()
     env_info = '\n'.join([(f'{k}: {v}') for k, v in env_info_dict.items()])
     dash_line = '-' * 60 + '\n'
@@ -216,6 +218,7 @@ def main():
     meta['seed'] = seed
     meta['exp_name'] = osp.basename(args.config)
 
+    # 初始化model
     model = build_model(
         cfg.model,
         train_cfg=cfg.get('train_cfg'),
@@ -223,6 +226,7 @@ def main():
     model.init_weights()
 
     logger.info(f'Model:\n{model}')
+    # 初始化dataset
     datasets = [build_dataset(cfg.data.train)]
     if len(cfg.workflow) == 2:
         val_dataset = copy.deepcopy(cfg.data.val)

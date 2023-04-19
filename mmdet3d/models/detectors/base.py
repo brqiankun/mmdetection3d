@@ -32,6 +32,7 @@ class Base3DDetector(BaseDetector):
                 raise TypeError('{} must be a list, but got {}'.format(
                     name, type(var)))
 
+        # 根据points list长度判断是simple_test 还是 aug_test
         num_augs = len(points)
         if num_augs != len(img_metas):
             raise ValueError(
@@ -44,6 +45,7 @@ class Base3DDetector(BaseDetector):
         else:
             return self.aug_test(points, img_metas, img, **kwargs)
 
+    # Base3DDetector 主要是重写了forward，改变模型输入数据类型，可同时传入点云数据和图片数据
     @auto_fp16(apply_to=('img', 'points'))
     def forward(self, return_loss=True, **kwargs):
         """Calls either forward_train or forward_test depending on whether
@@ -57,8 +59,10 @@ class Base3DDetector(BaseDetector):
         augmentations.
         """
         if return_loss:
+            # 训练模式 在不同算法子类中实现
             return self.forward_train(**kwargs)
         else:
+            # 测试模式
             return self.forward_test(**kwargs)
 
     def show_results(self, data, result, out_dir, show=False, score_thr=None):

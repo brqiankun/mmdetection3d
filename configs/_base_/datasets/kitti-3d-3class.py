@@ -110,11 +110,11 @@ eval_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=6,
-    workers_per_gpu=4,
+    samples_per_gpu=6,   # 单张GPU上的样本数
+    workers_per_gpu=4,   # 每张GPU上用于读取数据的进程数
     train=dict(
-        type='RepeatDataset',
-        times=2,
+        type='RepeatDataset',  # 数据集嵌套
+        times=2,               # 重复次数
         dataset=dict(
             type=dataset_type,
             data_root=data_root,

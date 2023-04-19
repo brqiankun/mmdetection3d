@@ -47,6 +47,7 @@ class BaseInstance3DBoxes(object):
             # does not depend on the inputs (and consequently confuses jit)
             tensor = tensor.reshape((0, box_dim)).to(
                 dtype=torch.float32, device=device)
+        # tensor的形状是: N * 7, 表示场景中的N个物体的3D框
         assert tensor.dim() == 2 and tensor.size(-1) == box_dim, tensor.size()
 
         if tensor.shape[-1] == 6:
@@ -60,7 +61,7 @@ class BaseInstance3DBoxes(object):
         else:
             self.box_dim = box_dim
             self.with_yaw = with_yaw
-        self.tensor = tensor.clone()
+        self.tensor = tensor.clone()    #具体Box值存储在self.tensor中，Box位置是底部中心位置，而非几何中心
 
         if origin != (0.5, 0.5, 0):
             dst = self.tensor.new_tensor((0.5, 0.5, 0))
@@ -134,12 +135,14 @@ class BaseInstance3DBoxes(object):
             a tensor with 8 corners of each box in shape (N, 8, 3)."""
         pass
 
+    # box投影到bev视角下 
     @property
     def bev(self):
         """torch.Tensor: 2D BEV box of each box with rotation
             in XYWHR format, in shape (N, 5)."""
         return self.tensor[:, [0, 1, 3, 4, 6]]
 
+    # nearest_bev 则是将 Box 投影到 BEV 视角下后，去掉朝向角，将 Box 和坐标轴对齐后的 2D BEV Box。
     @property
     def nearest_bev(self):
         """torch.Tensor: A tensor of 2D BEV box of each box
@@ -432,6 +435,7 @@ class BaseInstance3DBoxes(object):
         overlaps_h = torch.clamp(lowest_of_top - heighest_of_bottom, min=0)
         return overlaps_h
 
+    # 计算两个boxes类之间的IoU
     @classmethod
     def overlaps(cls, boxes1, boxes2, mode='iou'):
         """Calculate 3D overlaps of two boxes.
