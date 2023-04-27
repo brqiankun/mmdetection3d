@@ -221,20 +221,20 @@ data = dict(
 lr = 0.0003  # max learning rate
 optimizer = dict(type='AdamW', lr=lr, betas=(0.95, 0.99), weight_decay=0.01)
 optimizer_config = dict(grad_clip=dict(max_norm=10, norm_type=2))
-lr_config = dict(
+lr_config = dict(      # 自定义训练规程
     policy='cyclic',
     target_ratio=(10, 1e-4),
     cyclic_times=1,
     step_ratio_up=0.4)
-momentum_config = dict(
+momentum_config = dict(   # 动量规划器来加速模型收敛
     policy='cyclic',
     target_ratio=(0.85 / 0.95, 1),
     cyclic_times=1,
     step_ratio_up=0.4)
-checkpoint_config = dict(interval=1)
-evaluation = dict(interval=2, pipeline=eval_pipeline)
+checkpoint_config = dict(interval=1)                   # 检查点配置
+evaluation = dict(interval=2, pipeline=eval_pipeline)  #评估配置
 # yapf:disable
-log_config = dict(
+log_config = dict(  # 日志配置
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
@@ -248,4 +248,4 @@ log_level = 'INFO'
 work_dir = './work_dirs/sec_secfpn_80e'
 load_from = None
 resume_from = None
-workflow = [('train', 1)]
+workflow = [('train', 1)]  #工作量

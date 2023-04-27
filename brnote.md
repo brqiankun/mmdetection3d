@@ -1,7 +1,19 @@
 ### 常用链接
 https://mmdetection3d.readthedocs.io/zh_CN/latest/index.html
 
+``` python
+conda create -n mmdet3d_1_0 python=3.8
+conda activate mmdet3d_1_0
+conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.3 -c pytorch
+git checkout mmdet3d/learn
+pip install openmim
+mim install mmcv-full
+mim install mmdet
+mim install mmsegmentation
+# 安装mmdet3d
+pip install -v -e . 
 
+```
 ### 数据集
 常用数据集有：lidar-pools,public,kitti-mmdet3d，lidar-open-dataset, nuscenes-mmdet3d,waymo_kitti，lidar-robosense（kitti对应config文件为 ...../kitti/config_mdet3d/）
 
@@ -9,6 +21,189 @@ https://mmdetection3d.readthedocs.io/zh_CN/latest/index.html
 /share/public/public/kitti
 /share/public/lidar-open-dataset
 /share/public/lidar-open-dataset/kitti_openpcdet  #
+
+#### kitti数据集格式(自定义数据集)
+1. ImageSets包含数据集划分文件，用来划分训练、验证、测试集
+2. calib包含每数据样本的标定信息
+3. image_2和velodyne包含图像数据和点云数据
+4. label_2包含于3D目标检测相关的标注文件
+
+tools/waymo_converter.py 将waymo转换为kitti格式
+mmdet3d/datasets/waymo_dataset.py
+
+准备配置文件来帮助数据集的读取和使用
+需要三个配置文件: 数据集配置文件(configs/\_base\_/datasets/kitti-3d-3class.py) + 模型配置文件(configs/\_base\_/models/hv_pointpillars_secfpn_kitti.py) ==> 整体配置文件(configs/pointpillars/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class.py)
+
+自定义数据集, 重写新的数据集类后(mmdet3d/datasets/my_dataset.py), 修改数据集配置文件来调用my_dataset数据集类
+
+这是一个链接 [自定义数据集](https://mmdetection3d.readthedocs.io/zh_CN/latest/tutorials/customize_dataset.html)
+
+数据集包装器:  源码见(mmdet3d/datasets/dataset_wrappers.py)
+
+1. RepeatDataset：简单地重复整个数据集
+
+2. ClassBalancedDataset：以类别平衡的方式重复数据集 类别均衡(class balance): 避免某些类别被过拟合或忽略  进行重复的数据集需要实例化函数 self.get_cat_ids(idx)
+
+3. ConcatDataset：拼接多个数据集
+
+修改数据集类别 
+可以对现有数据集类别名进行修改, 实现全部标注的子集标注的训练。
+
+
+#### 自定义数据预处理流程
+[数据预处理流程](https://mmdetection3d.readthedocs.io/zh_CN/latest/tutorials/data_pipeline.html) <br>
+使用Dataset和DataLoader来调用多个进程进行数据加载
+
+Dataset 将会返回与模型前向传播的参数所对应的数据项构成的字典。在 MMCV 中引入一个 [DataContainer](https://github.com/open-mmlab/mmcv/blob/master/mmcv/parallel/data_container.py)类型，来帮助收集和分发不同尺寸的数据
+
+数据预处理流程和数据集之间是互相分离的两个部分。
+数据集定义了如何处理标注信息，而数据预处理流程定义了准备数据项字典的所有步骤
+数据集预处理流程包含一系列的操作，每个操作将一个字典作为输入，并输出应用于下一个转换的一个新的字典.<br>
+见(mmdetection3d/configs/_base_/datasets/kitti-3d-3class.py)  train_pipeline
+
+pipelines(比如LoadPointsFromFile)实现见mmdetection3d/mmdet3d/datasets/pipelines目录下
+
+1. 数据加载
+LoadPointsFromFile
+
+添加：points
+
+LoadPointsFromMultiSweeps
+
+更新：points
+
+LoadAnnotations3D
+
+添加：gt_bboxes_3d, gt_labels_3d, gt_bboxes, gt_labels, pts_instance_mask, pts_semantic_mask, bbox3d_fields, pts_mask_fields, pts_seg_fields
+
+2. 预处理
+GlobalRotScaleTrans
+
+添加：pcd_trans, pcd_rotation, pcd_scale_factor
+
+更新：points, *bbox3d_fields
+
+RandomFlip3D
+
+添加：flip, pcd_horizontal_flip, pcd_vertical_flip
+
+更新：points, *bbox3d_fields
+
+PointsRangeFilter
+
+更新：points
+
+ObjectRangeFilter
+
+更新：gt_bboxes_3d, gt_labels_3d
+
+ObjectNameFilter
+
+更新：gt_bboxes_3d, gt_labels_3d
+
+PointShuffle
+
+更新：points
+
+PointsRangeFilter
+
+更新：points
+
+3. 格式化
+DefaultFormatBundle3D
+
+更新：points, gt_bboxes_3d, gt_labels_3d, gt_bboxes, gt_labels
+
+Collect3D
+
+添加：img_meta （由 meta_keys 指定的键值构成的 img_meta）
+
+移除：所有除 keys 指定的键值以外的其他键值
+
+4. 测试时的数据增强
+MultiScaleFlipAug
+
+更新: scale, pcd_scale_factor, flip, flip_direction, pcd_horizontal_flip, pcd_vertical_flip （与这些指定的参数对应的增强后的数据列表）
+
+扩展并使用自定义数据集预处理方法
+
+在pipeline.py目录下创建my_pipeline.py 
+输入输出都是字典
+```
+from mmdet.datasets import PIPELINES
+
+@PIPELINES.register_module()
+class MyTransform:
+
+    def __call__(self, results):
+        results['dummy'] = True
+        return results
+```
+在mmdetection3d/mmdet3d/datasets/pipelines/\_\_init\_\_.py 中 <br>
+```
+from .my_pipeline import MyTransform
+```
+在配置文件中添加
+dict(type='MyTransform'),
+
+
+### 自定义模型
+模型包括:
+1. 编码器(encoder)  包括voxel layer， voxel encoder和middle encoder等进入backbone前使用的基于voxel的方法
+2. 骨干网络(backbone)  使用FCN来提取特征图 如ResNet
+3. 颈部网络(neck)  FPN和SECONDFPN
+4. 检测头(head)   特定任务的组成, 如检测框预测和掩码预测
+5. RoI提取器(RoI extractor) Region of Interest  用于目标检测和实例分割等任务，用于从图像或特征图中识别和提取特定区域
+6. 损失函数(loss)
+
+#### 以HardVFE为例搭建encoder
+HardVFE（Hard Voxel Feature Encoding）是一种三维点云处理方法，主要用于自动驾驶和机器人领域的对象检测和分割任务。它将输入的点云数据分解成固定大小的体素（voxels），然后对每个体素内的点进行特征提取和编码。
+
+HardVFE可以有效地降低点云数据的复杂性，同时保留空间和结构信息。它与二维图像处理中的卷积神经网络类似，具有较强的特征学习能力。
+
+#### 以SECOND为例搭建backbone
+SECOND (Sparsely Embedded Convolutional Detection) 是一种基于三维点云数据的物体检测算法，主要用于自动驾驶领域。它使用稀疏卷积神经网络（Sparse Convolutional Neural Network, SCNN）对输入点云进行有效处理，以加快计算速度并降低内存消耗。
+
+SECOND 的核心步骤如下：
+
+1. 将输入点云数据分解为固定大小的体素（Voxelization）。
+2. 使用 Voxel Feature Encoding（VFE）对每个体素的点进行特征提取和编码。
+3. 通过稀疏卷积层处理编码后的体素特征来学习高级语义信息。
+4. 应用区域提议网络（RPN, Region Proposal Network）生成候选边界框。
+5. 对 RPN 提出的候选区域进行非极大值抑制（NMS, Non-Maximum Suppression），筛选出最终结果。<br>
+SECOND 在保持高精度的同时，能够显著提高物体检测任务的计算效率，适用于实时场景中的自动驾驶应用。
+
+#### 添加新建 necks (SECONDFPN)
+
+#### 添加新建 heads 
+1. 单阶段检测器(mmdetection3d/mmdet3d/models/dense_heads)  
+单阶段检测器（One-stage Detector）是一类用于目标检测的深度学习算法。与两阶段检测器（如Faster R-CNN）相比，单阶段检测器直接在原始图像上生成目标边界框和类别概率，无需经过区域建议网络（RPN）生成候选框的步骤。因此，它们通常具有更高的计算效率和实时性，但在某些情况下可能牺牲一定的准确性。YOLO
+2. 双阶段检测器(mmdetection3d/mmdet3d/models/roi_heads)
+在mmdetection3d/mmdet3d/models/roi_heads下新建自定义bbox head
+
+用户需要在 mmdet3d/models/roi_heads/bbox_heads/__init__.py 和 mmdet3d/models/roi_heads/__init__.py 中添加新模块，使得对应的注册器能够发现并加载该模块。
+或者在配置文件中添加
+```
+custom_imports=dict(
+    imports=['mmdet3d.models.roi_heads.part_aggregation_roi_head', 'mmdet3d.models.roi_heads.bbox_heads.parta2_bbox_head'])
+```
+
+
+#### 新建loss
+在mmdetection3d/mmdet3d/models/losses中新建loss, 按照对应模板
+之后将新建loss添加到mmdetection3d/mmdet3d/models/losses/\_\_init\_\_.py
+也可在配置文件中添加custom_imports=dict()
+需要在对应的head中修改loss_bbox的值
+
+
+#### 自定义运行时配置 自定义优化器
+支持所有Pytorch的优化器，改变配置文件中的 optimizer 字段
+
+
+#### 模型复杂度分析
+```
+python tools/analysis_tools/get_flops.py configs/pointpillars/hv_pointpillars_secfpn_6x8_160e_kitti-3d-3class.py
+```
 
 
 ### pointnet++

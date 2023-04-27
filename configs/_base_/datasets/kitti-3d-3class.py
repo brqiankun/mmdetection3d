@@ -35,15 +35,15 @@ db_sampler = dict(
         file_client_args=file_client_args),
     file_client_args=file_client_args)
 
-train_pipeline = [
+train_pipeline = [    #数据集预处理流程
     dict(
-        type='LoadPointsFromFile',
+        type='LoadPointsFromFile',   # 数据加载添加 points
         coord_type='LIDAR',
         load_dim=4,
         use_dim=4,
         file_client_args=file_client_args),
     dict(
-        type='LoadAnnotations3D',
+        type='LoadAnnotations3D',    # 添加gt_bboxes_3d, gt_labels_3d, gt_bboxes, gt_labels, pts_instance_mask, pts_semantic_mask, bbox3d_fields, pts_mask_fields, pts_seg_fields
         with_bbox_3d=True,
         with_label_3d=True,
         file_client_args=file_client_args),
@@ -60,7 +60,7 @@ train_pipeline = [
         rot_range=[-0.78539816, 0.78539816],
         scale_ratio_range=[0.95, 1.05]),
     dict(type='PointsRangeFilter', point_cloud_range=point_cloud_range),
-    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
+    dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),  #添加 dict(type='MyTransform'),
     dict(type='PointShuffle'),
     dict(type='DefaultFormatBundle3D', class_names=class_names),
     dict(type='Collect3D', keys=['points', 'gt_bboxes_3d', 'gt_labels_3d'])
@@ -73,7 +73,7 @@ test_pipeline = [
         use_dim=4,
         file_client_args=file_client_args),
     dict(
-        type='MultiScaleFlipAug3D',
+        type='MultiScaleFlipAug3D',  #测试时的数据增强
         img_scale=(1333, 800),
         pts_scale_ratio=1,
         flip=False,
@@ -113,9 +113,9 @@ data = dict(
     samples_per_gpu=6,   # 单张GPU上的样本数
     workers_per_gpu=4,   # 每张GPU上用于读取数据的进程数
     train=dict(
-        type='RepeatDataset',  # 数据集嵌套
+        type='RepeatDataset',  # 数据集嵌套  RepeatDataset 包装器来进行数据集重复的设置
         times=2,               # 重复次数
-        dataset=dict(
+        dataset=dict(          # dataset_kitti的原始配置
             type=dataset_type,
             data_root=data_root,
             ann_file=data_root + 'kitti_infos_train.pkl',
@@ -123,7 +123,7 @@ data = dict(
             pts_prefix='velodyne_reduced',
             pipeline=train_pipeline,
             modality=input_modality,
-            classes=class_names,
+            classes=class_names,     # 只对现有数据集中class_names中的三个类别进行训练
             test_mode=False,
             # we use box_type_3d='LiDAR' in kitti and nuscenes dataset
             # and box_type_3d='Depth' in sunrgbd and scannet dataset.

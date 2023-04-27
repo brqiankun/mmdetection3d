@@ -6,7 +6,9 @@ from .pointnet2_fp_neck import PointNetFPNeck
 from .second_fpn import SECONDFPN
 from .view_transformer import LSSViewTransformer
 
+from .br_second_fpn import BR_SECONDFPN
+
 __all__ = [
     'FPN', 'SECONDFPN', 'OutdoorImVoxelNeck', 'IndoorImVoxelNeck',
-    'PointNetFPNeck', 'DLANeck', 'LSSViewTransformer'
+    'PointNetFPNeck', 'DLANeck', 'LSSViewTransformer', 'BR_SECONDFPN'
 ]
