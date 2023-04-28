@@ -14,6 +14,16 @@ mim install mmsegmentation
 pip install -v -e . 
 
 ```
+
+### 模型训练
+```
+# 单机单卡  nuscence可以
+python tools/train.py configs/pointpillars/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d.py 
+# 单机多卡
+./tools/dist_train.sh configs/pointpillars/hv_pointpillars_fpn_sbn-all_4x8_2x_nus-3d.py 8
+
+```
+
 ### 数据集
 常用数据集有：lidar-pools,public,kitti-mmdet3d，lidar-open-dataset, nuscenes-mmdet3d,waymo_kitti，lidar-robosense（kitti对应config文件为 ...../kitti/config_mdet3d/）
 
